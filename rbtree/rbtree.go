@@ -211,6 +211,9 @@ func (t *RbTree) search(key interface{}) *node {
 
 // O(logN)
 func (t *RbTree) delete(z *node) {
+	if z == nilNode {
+		return
+	}
 	y := z
 	yOriginalColor := y.color
 	var x *node
