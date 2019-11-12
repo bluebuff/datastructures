@@ -135,6 +135,20 @@ func (t *RbTree) Range(minKey, maxKey interface{}) []*pair.Pair {
 	return t.root.rangeAsc(minKey, maxKey, t.cmp)
 }
 
+// RangeN get num key-values which >= key in ASC
+// Pair.First: Key, Pair.Second: Value
+// O(N)
+func (t *RbTree) RangeN(num int, key interface{}) []*pair.Pair {
+	return t.root.rangeAscN(num, nil, key, t.cmp)
+}
+
+// RangeDescN get num key-values which <= key in DESC
+// Pair.First: Key, Pair.Second: Value
+// O(N)
+func (t *RbTree) RangeDescN(num int, key interface{}) []*pair.Pair {
+	return t.root.rangeDescN(num, nil, key, t.cmp)
+}
+
 // RangeDesc traversals in [minKey, maxKey] in DESC
 // MinKey & MaxKey are all closed interval.
 // Pair.First: Key, Pair.Second: Value

@@ -199,6 +199,25 @@ func (n *node) rangeAsc(minKey, maxKey interface{}, cmp CmpFunc) (res []*pair.Pa
 	return res
 }
 
+func (n *node) rangeAscN(num int, res []*pair.Pair, key interface{}, cmp CmpFunc)  []*pair.Pair {
+	if n == nilNode {
+		return res
+	}
+
+	iCmp := cmp(n.key, key) // cmp() may takes some time, so we just cmp one time.
+	if iCmp > 0 && len(res) < num {
+		res = n.left.rangeAscN(num, res, key, cmp)
+	}
+	if iCmp >= 0 && len(res) < num {
+		res = append(res, &pair.Pair{First:n.key, Second:n.value})
+	}
+	if len(res) < num {
+		res = n.right.rangeAscN(num, res, key, cmp)
+	}
+
+	return res
+}
+
 func (n *node) rangeDesc(minKey, maxKey interface{}, cmp CmpFunc) (res []*pair.Pair) {
 	if n == nilNode {
 		return res
@@ -213,6 +232,25 @@ func (n *node) rangeDesc(minKey, maxKey interface{}, cmp CmpFunc) (res []*pair.P
 	}
 	if cmpMin > 0 {
 		res = append(res, n.left.rangeDesc(minKey, maxKey, cmp)...)
+	}
+
+	return res
+}
+
+func (n *node) rangeDescN(num int, res []*pair.Pair, key interface{}, cmp CmpFunc)  []*pair.Pair {
+	if n == nilNode {
+		return res
+	}
+
+	iCmp := cmp(n.key, key) // cmp() may takes some time, so we just cmp one time.
+	if iCmp < 0 && len(res) < num {
+		res = n.right.rangeDescN(num, res, key, cmp)
+	}
+	if iCmp <= 0 && len(res) < num {
+		res = append(res, &pair.Pair{First:n.key, Second:n.value})
+	}
+	if len(res) < num {
+		res = n.left.rangeDescN(num, res, key, cmp)
 	}
 
 	return res
