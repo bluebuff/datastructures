@@ -148,111 +148,135 @@ func (n *node) check() (c *Check, ok bool) {
 	return c, true
 }
 
-func (n *node) rangeAllAsc() (res []*pair.Pair) {
+func (n *node) rangeAllAsc(res []pair.Pair, pos *int) {
 	if n == nilNode {
-		return res
+		return
 	}
 
 	if n.left != nilNode {
-		res = append(res, n.left.rangeAllAsc()...)
+		n.left.rangeAllAsc(res, pos)
 	}
-	res = append(res, &pair.Pair{First: n.key, Second: n.value})
+	res[*pos].First = n.key
+	res[*pos].Second = n.value
+	*pos++
 	if n.right != nilNode {
-		res = append(res, n.right.rangeAllAsc()...)
+		n.right.rangeAllAsc(res, pos)
 	}
-
-	return res
 }
 
-func (n *node) rangeAllDesc() (res []*pair.Pair) {
+func (n *node) rangeKeysAsc(res []interface{}, pos *int) {
 	if n == nilNode {
-		return res
+		return
+	}
+	if n.left != nilNode {
+		n.left.rangeKeysAsc(res, pos)
+	}
+	res[*pos] = n.key
+	*pos++
+	if n.right != nilNode {
+		n.right.rangeKeysAsc(res, pos)
+	}
+}
+
+func (n *node) rangeValuesAsc(res []interface{}, pos *int) {
+	if n == nilNode {
+		return
+	}
+	if n.left != nilNode {
+		n.left.rangeValuesAsc(res, pos)
+	}
+	res[*pos] = n.value
+	*pos++
+	if n.right != nilNode {
+		n.right.rangeValuesAsc(res, pos)
+	}
+}
+
+func (n *node) rangeAllDesc(res []pair.Pair, pos *int) {
+	if n == nilNode {
+		return
 	}
 
 	if n.right != nilNode {
-		res = append(res, n.right.rangeAllDesc()...)
+		n.right.rangeAllDesc(res, pos)
 	}
-	res = append(res, &pair.Pair{First: n.key, Second: n.value})
+	res[*pos].First = n.key
+	res[*pos].Second = n.value
+	*pos++
 	if n.left != nilNode {
-		res = append(res, n.left.rangeAllDesc()...)
+		n.left.rangeAllDesc(res, pos)
 	}
-
-	return res
 }
 
-func (n *node) rangeAsc(minKey, maxKey interface{}, cmp CmpFunc) (res []*pair.Pair) {
+func (n *node) rangeAsc(res []pair.Pair, minKey, maxKey interface{}, cmp CmpFunc) []pair.Pair {
 	if n == nilNode {
 		return res
 	}
 
 	cmpMin, cmpMax := cmp(n.key, minKey), cmp(n.key, maxKey) // cmp() may takes some time, so we just cmp one time.
 	if cmpMin > 0 {
-		res = append(res, n.left.rangeAsc(minKey, maxKey, cmp)...)
+		res = n.left.rangeAsc(res, minKey, maxKey, cmp)
 	}
 	if cmpMin >= 0 && cmpMax <= 0 {
-		res = append(res, &pair.Pair{First: n.key, Second: n.value})
+		res = append(res, pair.Pair{First: n.key, Second: n.value})
 	}
 	if cmpMax < 0 {
-		res = append(res, n.right.rangeAsc(minKey, maxKey, cmp)...)
+		res = n.right.rangeAsc(res, minKey, maxKey, cmp)
 	}
-
 	return res
 }
 
-func (n *node) rangeAscN(num int, res []*pair.Pair, key interface{}, cmp CmpFunc)  []*pair.Pair {
+func (n *node) rangeAscN(res []pair.Pair, num int, key interface{}, cmp CmpFunc) []pair.Pair {
 	if n == nilNode {
 		return res
 	}
 
 	iCmp := cmp(n.key, key) // cmp() may takes some time, so we just cmp one time.
 	if iCmp > 0 && len(res) < num {
-		res = n.left.rangeAscN(num, res, key, cmp)
+		res = n.left.rangeAscN(res, num, key, cmp)
 	}
 	if iCmp >= 0 && len(res) < num {
-		res = append(res, &pair.Pair{First:n.key, Second:n.value})
+		res = append(res, pair.Pair{First: n.key, Second: n.value})
 	}
 	if len(res) < num {
-		res = n.right.rangeAscN(num, res, key, cmp)
+		res = n.right.rangeAscN(res, num, key, cmp)
 	}
-
 	return res
 }
 
-func (n *node) rangeDesc(minKey, maxKey interface{}, cmp CmpFunc) (res []*pair.Pair) {
+func (n *node) rangeDesc(res []pair.Pair, minKey, maxKey interface{}, cmp CmpFunc) []pair.Pair {
 	if n == nilNode {
 		return res
 	}
 
 	cmpMin, cmpMax := cmp(n.key, minKey), cmp(n.key, maxKey) // cmp() may takes some time, so we just cmp one time.
 	if cmpMax < 0 {
-		res = append(res, n.right.rangeDesc(minKey, maxKey, cmp)...)
+		res = n.right.rangeDesc(res, minKey, maxKey, cmp)
 	}
 	if cmpMin >= 0 && cmpMax <= 0 {
-		res = append(res, &pair.Pair{First: n.key, Second: n.value})
+		res = append(res, pair.Pair{First: n.key, Second: n.value})
 	}
 	if cmpMin > 0 {
-		res = append(res, n.left.rangeDesc(minKey, maxKey, cmp)...)
+		res = n.left.rangeDesc(res, minKey, maxKey, cmp)
 	}
-
 	return res
 }
 
-func (n *node) rangeDescN(num int, res []*pair.Pair, key interface{}, cmp CmpFunc)  []*pair.Pair {
+func (n *node) rangeDescN(res []pair.Pair, num int, key interface{}, cmp CmpFunc) []pair.Pair {
 	if n == nilNode {
 		return res
 	}
 
 	iCmp := cmp(n.key, key) // cmp() may takes some time, so we just cmp one time.
 	if iCmp < 0 && len(res) < num {
-		res = n.right.rangeDescN(num, res, key, cmp)
+		res = n.right.rangeDescN(res, num, key, cmp)
 	}
 	if iCmp <= 0 && len(res) < num {
-		res = append(res, &pair.Pair{First:n.key, Second:n.value})
+		res = append(res, pair.Pair{First: n.key, Second: n.value})
 	}
 	if len(res) < num {
-		res = n.left.rangeDescN(num, res, key, cmp)
+		res = n.left.rangeDescN(res, num, key, cmp)
 	}
-
 	return res
 }
 

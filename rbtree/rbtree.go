@@ -35,14 +35,14 @@ func (t *RbTree) IsEmpty() bool {
 }
 
 // Search returns the value to key, or nil if not found.
-// For example: if value := t.Search(key); value != nil { value found }
+// For example: if value, ok := t.Search(key); ok { value found }
 // O(logN)
-func (t *RbTree) Get(key interface{}) (value interface{}) {
+func (t *RbTree) Get(key interface{}) (value interface{}, ok bool) {
 	p := t.search(key)
 	if p == nilNode {
-		return nil
+		return nil, false
 	} else {
-		return p.value
+		return p.value, true
 	}
 }
 
@@ -113,48 +113,72 @@ func (t *RbTree) Max() (key, value interface{}) {
 	}
 }
 
+// Keys traversals in ASC
+// O(N)
+func (t *RbTree) Keys() []interface{} {
+	pos := 0
+	res := make([]interface{}, t.len)
+	t.root.rangeKeysAsc(res, &pos)
+	return res
+}
+
+// Values traversals in ASC
+// O(N)
+func (t *RbTree) Values() []interface{} {
+	pos := 0
+	res := make([]interface{}, t.len)
+	t.root.rangeValuesAsc(res, &pos)
+	return res
+}
+
 // RangeAll traversals in ASC
 // Pair.First: Key, Pair.Second: Value
 // O(N)
-func (t *RbTree) RangeAll() []*pair.Pair {
-	return t.root.rangeAllAsc()
+func (t *RbTree) RangeAll() []pair.Pair {
+	pos := 0
+	res := make([]pair.Pair, t.len)
+	t.root.rangeAllAsc(res, &pos)
+	return res
 }
 
 // RangeAllDesc traversals in DESC
 // Pair.First: Key, Pair.Second: Value
 // O(N)
-func (t *RbTree) RangeAllDesc() []*pair.Pair {
-	return t.root.rangeAllDesc()
+func (t *RbTree) RangeAllDesc() []pair.Pair {
+	pos := 0
+	res := make([]pair.Pair, t.len)
+	t.root.rangeAllDesc(res, &pos)
+	return res
 }
 
 // Range traversals in [minKey, maxKey] in ASC
 // MinKey & MaxKey are all closed interval.
 // Pair.First: Key, Pair.Second: Value
 // O(N)
-func (t *RbTree) Range(minKey, maxKey interface{}) []*pair.Pair {
-	return t.root.rangeAsc(minKey, maxKey, t.cmp)
+func (t *RbTree) Range(minKey, maxKey interface{}) []pair.Pair {
+	return t.root.rangeAsc(nil, minKey, maxKey, t.cmp)
 }
 
 // RangeN get num key-values which >= key in ASC
 // Pair.First: Key, Pair.Second: Value
 // O(N)
-func (t *RbTree) RangeN(num int, key interface{}) []*pair.Pair {
-	return t.root.rangeAscN(num, nil, key, t.cmp)
+func (t *RbTree) RangeN(num int, key interface{}) []pair.Pair {
+	return t.root.rangeAscN(nil, num, key, t.cmp)
 }
 
 // RangeDescN get num key-values which <= key in DESC
 // Pair.First: Key, Pair.Second: Value
 // O(N)
-func (t *RbTree) RangeDescN(num int, key interface{}) []*pair.Pair {
-	return t.root.rangeDescN(num, nil, key, t.cmp)
+func (t *RbTree) RangeDescN(num int, key interface{}) []pair.Pair {
+	return t.root.rangeDescN(nil, num, key, t.cmp)
 }
 
 // RangeDesc traversals in [minKey, maxKey] in DESC
 // MinKey & MaxKey are all closed interval.
 // Pair.First: Key, Pair.Second: Value
 // O(N)
-func (t *RbTree) RangeDesc(minKey, maxKey interface{}) []*pair.Pair {
-	return t.root.rangeDesc(minKey, maxKey, t.cmp)
+func (t *RbTree) RangeDesc(minKey, maxKey interface{}) []pair.Pair {
+	return t.root.rangeDesc(nil, minKey, maxKey, t.cmp)
 }
 
 // PopMin will delete the min node and return it.
