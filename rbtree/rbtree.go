@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-type RbTree struct {
+type rbTree struct {
 	len  int
 	root *node
 	cmp  CmpFunc // cmp(key1, key2). It returns 0 if key1 == key2, returns 1 if key1 > key2, returns -1 if key1 < key2.
@@ -22,22 +22,22 @@ Example:
 */
 type CmpFunc func(interface{}, interface{}) int
 
-func New(f CmpFunc) *RbTree {
-	return &RbTree{len: 0, root: nilNode, cmp: f}
+func New(f CmpFunc) *rbTree {
+	return &rbTree{len: 0, root: nilNode, cmp: f}
 }
 
-func (t *RbTree) Len() int {
+func (t *rbTree) Len() int {
 	return t.len
 }
 
-func (t *RbTree) IsEmpty() bool {
+func (t *rbTree) IsEmpty() bool {
 	return t.len == 0
 }
 
 // Search returns the value to key, or nil if not found.
 // For example: if value, ok := t.Search(key); ok { value found }
 // O(logN)
-func (t *RbTree) Get(key interface{}) (value interface{}, ok bool) {
+func (t *rbTree) Get(key interface{}) (value interface{}, ok bool) {
 	p := t.search(key)
 	if p == nilNode {
 		return nil, false
@@ -46,11 +46,11 @@ func (t *RbTree) Get(key interface{}) (value interface{}, ok bool) {
 	}
 }
 
-// Put stores the key-value pair into RbTree.
-// 1. If there is already a same key in RbTree, it will replace the value.
+// Put stores the key-value pair into rbTree.
+// 1. If there is already a same key in rbTree, it will replace the value.
 // 2. Otherwise, it will insert a new node with the key-value.
 // O(logN)
-func (t *RbTree) Put(key interface{}, value interface{}) {
+func (t *rbTree) Put(key interface{}, value interface{}) {
 	y := nilNode
 	x := t.root
 	for x != nilNode {
@@ -80,7 +80,7 @@ func (t *RbTree) Put(key interface{}, value interface{}) {
 }
 
 // O(logN)
-func (t *RbTree) Delete(key interface{}) {
+func (t *rbTree) Delete(key interface{}) {
 	z := t.search(key)
 	if z == nilNode {
 		return // not found
@@ -92,7 +92,7 @@ func (t *RbTree) Delete(key interface{}) {
 // Min returns the key-value to the minimum key, or nil if the tree is empty.
 // For example: if key, value := t.Min(key); key != nil { found }
 // O(logN)
-func (t *RbTree) Min() (key, value interface{}) {
+func (t *rbTree) Min() (key, value interface{}) {
 	p := t.root.min()
 	if p == nilNode {
 		return nil, nil
@@ -104,7 +104,7 @@ func (t *RbTree) Min() (key, value interface{}) {
 // Max returns the key-value to the maximum key, or nil if the tree is empty.
 // For example: if key, value := t.Max(); key != nil { found }
 // O(logN)
-func (t *RbTree) Max() (key, value interface{}) {
+func (t *rbTree) Max() (key, value interface{}) {
 	p := t.root.max()
 	if p == nilNode {
 		return nil, nil
@@ -115,7 +115,7 @@ func (t *RbTree) Max() (key, value interface{}) {
 
 // Keys traversals in ASC
 // O(N)
-func (t *RbTree) Keys() []interface{} {
+func (t *rbTree) Keys() []interface{} {
 	pos := 0
 	res := make([]interface{}, t.len)
 	t.root.rangeKeysAsc(res, &pos)
@@ -124,7 +124,7 @@ func (t *RbTree) Keys() []interface{} {
 
 // Values traversals in ASC
 // O(N)
-func (t *RbTree) Values() []interface{} {
+func (t *rbTree) Values() []interface{} {
 	pos := 0
 	res := make([]interface{}, t.len)
 	t.root.rangeValuesAsc(res, &pos)
@@ -134,7 +134,7 @@ func (t *RbTree) Values() []interface{} {
 // RangeAll traversals in ASC
 // Pair.First: Key, Pair.Second: Value
 // O(N)
-func (t *RbTree) RangeAll() []pair.Pair {
+func (t *rbTree) RangeAll() []pair.Pair {
 	pos := 0
 	res := make([]pair.Pair, t.len)
 	t.root.rangeAllAsc(res, &pos)
@@ -144,7 +144,7 @@ func (t *RbTree) RangeAll() []pair.Pair {
 // RangeAllDesc traversals in DESC
 // Pair.First: Key, Pair.Second: Value
 // O(N)
-func (t *RbTree) RangeAllDesc() []pair.Pair {
+func (t *rbTree) RangeAllDesc() []pair.Pair {
 	pos := 0
 	res := make([]pair.Pair, t.len)
 	t.root.rangeAllDesc(res, &pos)
@@ -155,21 +155,21 @@ func (t *RbTree) RangeAllDesc() []pair.Pair {
 // MinKey & MaxKey are all closed interval.
 // Pair.First: Key, Pair.Second: Value
 // O(N)
-func (t *RbTree) Range(minKey, maxKey interface{}) []pair.Pair {
+func (t *rbTree) Range(minKey, maxKey interface{}) []pair.Pair {
 	return t.root.rangeAsc(nil, minKey, maxKey, t.cmp)
 }
 
 // RangeN get num key-values which >= key in ASC
 // Pair.First: Key, Pair.Second: Value
 // O(N)
-func (t *RbTree) RangeN(num int, key interface{}) []pair.Pair {
+func (t *rbTree) RangeN(num int, key interface{}) []pair.Pair {
 	return t.root.rangeAscN(nil, num, key, t.cmp)
 }
 
 // RangeDescN get num key-values which <= key in DESC
 // Pair.First: Key, Pair.Second: Value
 // O(N)
-func (t *RbTree) RangeDescN(num int, key interface{}) []pair.Pair {
+func (t *rbTree) RangeDescN(num int, key interface{}) []pair.Pair {
 	return t.root.rangeDescN(nil, num, key, t.cmp)
 }
 
@@ -177,13 +177,13 @@ func (t *RbTree) RangeDescN(num int, key interface{}) []pair.Pair {
 // MinKey & MaxKey are all closed interval.
 // Pair.First: Key, Pair.Second: Value
 // O(N)
-func (t *RbTree) RangeDesc(minKey, maxKey interface{}) []pair.Pair {
+func (t *rbTree) RangeDesc(minKey, maxKey interface{}) []pair.Pair {
 	return t.root.rangeDesc(nil, minKey, maxKey, t.cmp)
 }
 
 // PopMin will delete the min node and return it.
 // O(logN)
-func (t *RbTree) PopMin() (key, value interface{}) {
+func (t *rbTree) PopMin() (key, value interface{}) {
 	p := t.root.min()
 	t.delete(p)
 	return p.key, p.value
@@ -191,7 +191,7 @@ func (t *RbTree) PopMin() (key, value interface{}) {
 
 // PopMax will delete the max node and return it.
 // O(logN)
-func (t *RbTree) PopMax() (key, value interface{}) {
+func (t *rbTree) PopMax() (key, value interface{}) {
 	p := t.root.max()
 	t.delete(p)
 	return p.key, p.value
@@ -206,7 +206,7 @@ func (t *RbTree) PopMax() (key, value interface{}) {
                                              [10]R
 */
 // Deprecated: only for debugging, unstable function
-func (t *RbTree) String() string {
+func (t *rbTree) String() string {
 	step := t.getKeyMaxLen()
 	step += 3 // one step [key]colour, example: [123456]B
 	depth := t.root.getDepth()
@@ -232,7 +232,7 @@ func (t *RbTree) String() string {
 	return str
 }
 
-func (t *RbTree) search(key interface{}) *node {
+func (t *rbTree) search(key interface{}) *node {
 	p := t.root
 	for p != nilNode {
 		cmp := t.cmp(p.key, key)
@@ -248,7 +248,7 @@ func (t *RbTree) search(key interface{}) *node {
 }
 
 // O(logN)
-func (t *RbTree) delete(z *node) {
+func (t *rbTree) delete(z *node) {
 	if z == nilNode {
 		return
 	}
@@ -288,7 +288,7 @@ func (t *RbTree) delete(z *node) {
 }
 
 // O(1)
-func (t *RbTree) leftRotate(x *node) {
+func (t *rbTree) leftRotate(x *node) {
 	y := x.right
 
 	x.right = y.left
@@ -310,7 +310,7 @@ func (t *RbTree) leftRotate(x *node) {
 }
 
 // O(1)
-func (t *RbTree) rightRotate(x *node) {
+func (t *rbTree) rightRotate(x *node) {
 	y := x.left
 
 	x.left = y.right
@@ -331,7 +331,7 @@ func (t *RbTree) rightRotate(x *node) {
 	x.parent = y
 }
 
-func (t *RbTree) transplant(u, v *node) {
+func (t *rbTree) transplant(u, v *node) {
 	if u.parent == nilNode {
 		t.root = v
 	} else if u == u.parent.left {
@@ -344,7 +344,7 @@ func (t *RbTree) transplant(u, v *node) {
 }
 
 // O(logN)
-func (t *RbTree) fixupInsert(z *node) {
+func (t *rbTree) fixupInsert(z *node) {
 	// The necessary conditions for each entry into the loop:
 	// 1. z.color == red
 	// 2. if t.root == z.parent, z.parent must be black
@@ -393,7 +393,7 @@ func (t *RbTree) fixupInsert(z *node) {
 }
 
 // O(logN)
-func (t *RbTree) fixupDelete(x *node) {
+func (t *rbTree) fixupDelete(x *node) {
 	// x is a node carries extra black, it can be red-black or black-black.
 	//   1. if x == t.root, we can just remove the extra black.
 	//   2. if x.color == red, we can change x to black.
@@ -455,7 +455,7 @@ func (t *RbTree) fixupDelete(x *node) {
 }
 
 // O(logN)
-func (t *RbTree) getKeyMaxLen() uint {
+func (t *rbTree) getKeyMaxLen() uint {
 	minNode := t.root.min()
 	lenMin := uint(len(fmt.Sprintf("%v", minNode.key)))
 	maxNode := t.root.max()
