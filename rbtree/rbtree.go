@@ -10,6 +10,7 @@ type rbTree struct {
 	len  int
 	root *node
 	cmp  CmpFunc // cmp(key1, key2). It returns 0 if key1 == key2, returns 1 if key1 > key2, returns -1 if key1 < key2.
+	nil  *node
 }
 
 // CmpFunc such as CmpFunc(key1, key2).
@@ -23,7 +24,8 @@ Example:
 type CmpFunc func(interface{}, interface{}) int
 
 func New(f CmpFunc) *rbTree {
-	return &rbTree{len: 0, root: nilNode, cmp: f}
+	nilNode := &node{color: black}
+	return &rbTree{len: 0, root: nilNode, cmp: f, nil: nilNode}
 }
 
 func (t *rbTree) Len() int {
@@ -39,7 +41,7 @@ func (t *rbTree) IsEmpty() bool {
 // O(logN)
 func (t *rbTree) Get(key interface{}) (value interface{}, ok bool) {
 	p := t.search(key)
-	if p == nilNode {
+	if p == t.nil {
 		return nil, false
 	} else {
 		return p.value, true
@@ -51,9 +53,9 @@ func (t *rbTree) Get(key interface{}) (value interface{}, ok bool) {
 // 2. Otherwise, it will insert a new node with the key-value.
 // O(logN)
 func (t *rbTree) Put(key interface{}, value interface{}) {
-	y := nilNode
+	y := t.nil
 	x := t.root
-	for x != nilNode {
+	for x != t.nil {
 		y = x
 		if t.cmp(x.key, key) == 0 {
 			x.value = value
@@ -66,8 +68,8 @@ func (t *rbTree) Put(key interface{}, value interface{}) {
 	}
 
 	// if not found, we insert a new node
-	z := newNodeForInsert(key, value, y)
-	if y == nilNode {
+	z := t.newNodeForInsert(key, value, y)
+	if y == t.nil {
 		t.root = z
 	} else if t.cmp(y.key, key) > 0 {
 		y.left = z
@@ -82,7 +84,7 @@ func (t *rbTree) Put(key interface{}, value interface{}) {
 // O(logN)
 func (t *rbTree) Delete(key interface{}) {
 	z := t.search(key)
-	if z == nilNode {
+	if z == t.nil {
 		return // not found
 	}
 
@@ -93,8 +95,8 @@ func (t *rbTree) Delete(key interface{}) {
 // For example: if key, value := t.Min(key); key != nil { found }
 // O(logN)
 func (t *rbTree) Min() (key, value interface{}) {
-	p := t.root.min()
-	if p == nilNode {
+	p := t.min(t.root)
+	if p == t.nil {
 		return nil, nil
 	} else {
 		return p.key, p.value
@@ -105,8 +107,8 @@ func (t *rbTree) Min() (key, value interface{}) {
 // For example: if key, value := t.Max(); key != nil { found }
 // O(logN)
 func (t *rbTree) Max() (key, value interface{}) {
-	p := t.root.max()
-	if p == nilNode {
+	p := t.max(t.root)
+	if p == t.nil {
 		return nil, nil
 	} else {
 		return p.key, p.value
@@ -118,7 +120,7 @@ func (t *rbTree) Max() (key, value interface{}) {
 func (t *rbTree) Keys() []interface{} {
 	pos := 0
 	res := make([]interface{}, t.len)
-	t.root.rangeKeysAsc(res, &pos)
+	t.rangeKeysAsc(t.root, res, &pos)
 	return res
 }
 
@@ -127,7 +129,7 @@ func (t *rbTree) Keys() []interface{} {
 func (t *rbTree) Values() []interface{} {
 	pos := 0
 	res := make([]interface{}, t.len)
-	t.root.rangeValuesAsc(res, &pos)
+	t.rangeValuesAsc(t.root, res, &pos)
 	return res
 }
 
@@ -137,7 +139,7 @@ func (t *rbTree) Values() []interface{} {
 func (t *rbTree) RangeAll() []pair.Pair {
 	pos := 0
 	res := make([]pair.Pair, t.len)
-	t.root.rangeAllAsc(res, &pos)
+	t.rangeAllAsc(t.root, res, &pos)
 	return res
 }
 
@@ -147,7 +149,7 @@ func (t *rbTree) RangeAll() []pair.Pair {
 func (t *rbTree) RangeAllDesc() []pair.Pair {
 	pos := 0
 	res := make([]pair.Pair, t.len)
-	t.root.rangeAllDesc(res, &pos)
+	t.rangeAllDesc(t.root, res, &pos)
 	return res
 }
 
@@ -156,21 +158,21 @@ func (t *rbTree) RangeAllDesc() []pair.Pair {
 // Pair.First: Key, Pair.Second: Value
 // O(N)
 func (t *rbTree) Range(minKey, maxKey interface{}) []pair.Pair {
-	return t.root.rangeAsc(nil, minKey, maxKey, t.cmp)
+	return t.rangeAsc(t.root, nil, minKey, maxKey, t.cmp)
 }
 
 // RangeN get num key-values which >= key in ASC
 // Pair.First: Key, Pair.Second: Value
 // O(N)
 func (t *rbTree) RangeN(num int, key interface{}) []pair.Pair {
-	return t.root.rangeAscN(nil, num, key, t.cmp)
+	return t.rangeAscN(t.root, nil, num, key, t.cmp)
 }
 
 // RangeDescN get num key-values which <= key in DESC
 // Pair.First: Key, Pair.Second: Value
 // O(N)
 func (t *rbTree) RangeDescN(num int, key interface{}) []pair.Pair {
-	return t.root.rangeDescN(nil, num, key, t.cmp)
+	return t.rangeDescN(t.root, nil, num, key, t.cmp)
 }
 
 // RangeDesc traversals in [minKey, maxKey] in DESC
@@ -178,13 +180,13 @@ func (t *rbTree) RangeDescN(num int, key interface{}) []pair.Pair {
 // Pair.First: Key, Pair.Second: Value
 // O(N)
 func (t *rbTree) RangeDesc(minKey, maxKey interface{}) []pair.Pair {
-	return t.root.rangeDesc(nil, minKey, maxKey, t.cmp)
+	return t.rangeDesc(t.root, nil, minKey, maxKey, t.cmp)
 }
 
 // PopMin will delete the min node and return it.
 // O(logN)
 func (t *rbTree) PopMin() (key, value interface{}) {
-	p := t.root.min()
+	p := t.min(t.root)
 	t.delete(p)
 	return p.key, p.value
 }
@@ -192,7 +194,7 @@ func (t *rbTree) PopMin() (key, value interface{}) {
 // PopMax will delete the max node and return it.
 // O(logN)
 func (t *rbTree) PopMax() (key, value interface{}) {
-	p := t.root.max()
+	p := t.max(t.root)
 	t.delete(p)
 	return p.key, p.value
 }
@@ -209,8 +211,8 @@ func (t *rbTree) PopMax() (key, value interface{}) {
 func (t *rbTree) String() string {
 	step := t.getKeyMaxLen()
 	step += 3 // one step [key]colour, example: [123456]B
-	depth := t.root.getDepth()
-	lDepth := t.root.getLeftDepth()
+	depth := t.getDepth(t.root)
+	lDepth := t.getLeftDepth(t.root)
 	lMove := uint(0)
 	if depth > lDepth {
 		lMove = step<<(depth-lDepth) - step
@@ -219,7 +221,7 @@ func (t *rbTree) String() string {
 	for i := uint(0); i < depth; i++ {
 		buffs[i] = &strings.Builder{}
 	}
-	t.root.makeString(buffs, step, lMove, depth, 1, true, false)
+	t.makeString(t.root, buffs, step, lMove, depth, 1, true, false)
 	/*check, ok := t.root.check()
 	strCheck := fmt.Sprintf("Tree check is %v, MaxH %v, MinH %v, BlackH %v, Len %v, Root colour: %v", ok, check.MaxH, check.MinH, check.BlackH, check.Len, check.Colour)
 	ss := []string{strCheck}*/
@@ -234,7 +236,7 @@ func (t *rbTree) String() string {
 
 func (t *rbTree) search(key interface{}) *node {
 	p := t.root
-	for p != nilNode {
+	for p != t.nil {
 		cmp := t.cmp(p.key, key)
 		if cmp == 0 {
 			break
@@ -249,20 +251,20 @@ func (t *rbTree) search(key interface{}) *node {
 
 // O(logN)
 func (t *rbTree) delete(z *node) {
-	if z == nilNode {
+	if z == t.nil {
 		return
 	}
 	y := z
 	yOriginalColor := y.color
 	var x *node
-	if z.left == nilNode {
+	if z.left == t.nil {
 		x = z.right
 		t.transplant(z, z.right)
-	} else if z.right == nilNode {
+	} else if z.right == t.nil {
 		x = z.left
 		t.transplant(z, z.left)
 	} else {
-		y = z.right.min()
+		y = t.min(z.right)
 		yOriginalColor = y.color
 		x = y.right
 		if y.parent == z {
@@ -292,12 +294,12 @@ func (t *rbTree) leftRotate(x *node) {
 	y := x.right
 
 	x.right = y.left
-	if y.left != nilNode {
+	if y.left != t.nil {
 		y.left.parent = x
 	}
 
 	y.parent = x.parent
-	if x.parent == nilNode {
+	if x.parent == t.nil {
 		t.root = y
 	} else if x == x.parent.left {
 		x.parent.left = y
@@ -314,12 +316,12 @@ func (t *rbTree) rightRotate(x *node) {
 	y := x.left
 
 	x.left = y.right
-	if y.right != nilNode {
+	if y.right != t.nil {
 		y.right.parent = x
 	}
 
 	y.parent = x.parent
-	if x.parent == nilNode {
+	if x.parent == t.nil {
 		t.root = y
 	} else if x == x.parent.left {
 		x.parent.left = y
@@ -332,7 +334,7 @@ func (t *rbTree) rightRotate(x *node) {
 }
 
 func (t *rbTree) transplant(u, v *node) {
-	if u.parent == nilNode {
+	if u.parent == t.nil {
 		t.root = v
 	} else if u == u.parent.left {
 		u.parent.left = v
@@ -456,9 +458,9 @@ func (t *rbTree) fixupDelete(x *node) {
 
 // O(logN)
 func (t *rbTree) getKeyMaxLen() uint {
-	minNode := t.root.min()
+	minNode := t.min(t.root)
 	lenMin := uint(len(fmt.Sprintf("%v", minNode.key)))
-	maxNode := t.root.max()
+	maxNode := t.max(t.root)
 	lenMax := uint(len(fmt.Sprintf("%v", maxNode.key)))
 	var step uint
 	if lenMin > lenMax {
@@ -467,4 +469,372 @@ func (t *rbTree) getKeyMaxLen() uint {
 		step = lenMax
 	}
 	return step
+}
+
+type node struct {
+	key    interface{}
+	value  interface{}
+	parent *node // parent
+	left   *node // left child
+	right  *node // right child
+	color  colours
+}
+
+type colours uint8
+
+const (
+	red colours = iota
+	black
+)
+
+// newNodeForInsert returns a pointer to the new node containing the key/value, the new node must be red
+func (t *rbTree) newNodeForInsert(key interface{}, value interface{}, parent *node) *node {
+	return &node{key: key, value: value, color: red, parent: parent, left: t.nil, right: t.nil}
+}
+
+// O(logN)
+func (t *rbTree) min(n *node) *node {
+	p := n
+	for p != t.nil && p.left != t.nil {
+		p = p.left
+	}
+	return p
+}
+
+// O(logN)
+func (t *rbTree) max(n *node) *node {
+	p := n
+	for p != t.nil && p.right != t.nil {
+		p = p.right
+	}
+	return p
+}
+
+// O(logN)
+func (t *rbTree) successor(n *node) *node {
+	if n.right != t.nil {
+		return t.min(n.right)
+	}
+
+	x := n
+	y := x.parent
+	for y != t.nil && x == y.right {
+		x = y
+		y = y.parent
+	}
+	return y
+}
+
+// O(logN)
+func (t *rbTree) predecessor(n *node) *node {
+	if n.left != t.nil {
+		return t.max(n.left)
+	}
+
+	return n.parent
+}
+
+func (t *rbTree) rangeAllAsc(n *node, res []pair.Pair, pos *int) {
+	if n == t.nil {
+		return
+	}
+
+	if n.left != t.nil {
+		t.rangeAllAsc(n.left, res, pos)
+	}
+	res[*pos].First = n.key
+	res[*pos].Second = n.value
+	*pos++
+	if n.right != t.nil {
+		t.rangeAllAsc(n.right, res, pos)
+	}
+}
+
+func (t *rbTree) rangeKeysAsc(n *node, res []interface{}, pos *int) {
+	if n == t.nil {
+		return
+	}
+	if n.left != t.nil {
+		t.rangeKeysAsc(n.left, res, pos)
+	}
+	res[*pos] = n.key
+	*pos++
+	if n.right != t.nil {
+		t.rangeKeysAsc(n.right, res, pos)
+	}
+}
+
+func (t *rbTree) rangeValuesAsc(n *node, res []interface{}, pos *int) {
+	if n == t.nil {
+		return
+	}
+	if n.left != t.nil {
+		t.rangeValuesAsc(n.left, res, pos)
+	}
+	res[*pos] = n.value
+	*pos++
+	if n.right != t.nil {
+		t.rangeValuesAsc(n.right, res, pos)
+	}
+}
+
+func (t *rbTree) rangeAllDesc(n *node, res []pair.Pair, pos *int) {
+	if n == t.nil {
+		return
+	}
+
+	if n.right != t.nil {
+		t.rangeAllDesc(n.right, res, pos)
+	}
+	res[*pos].First = n.key
+	res[*pos].Second = n.value
+	*pos++
+	if n.left != t.nil {
+		t.rangeAllDesc(n.left, res, pos)
+	}
+}
+
+func (t *rbTree) rangeAsc(n *node, res []pair.Pair, minKey, maxKey interface{}, cmp CmpFunc) []pair.Pair {
+	if n == t.nil {
+		return res
+	}
+
+	cmpMin, cmpMax := cmp(n.key, minKey), cmp(n.key, maxKey) // cmp() may takes some time, so we just cmp one time.
+	if cmpMin > 0 {
+		res = t.rangeAsc(n.left, res, minKey, maxKey, cmp)
+	}
+	if cmpMin >= 0 && cmpMax <= 0 {
+		res = append(res, pair.Pair{First: n.key, Second: n.value})
+	}
+	if cmpMax < 0 {
+		res = t.rangeAsc(n.right, res, minKey, maxKey, cmp)
+	}
+	return res
+}
+
+func (t *rbTree) rangeAscN(n *node, res []pair.Pair, num int, key interface{}, cmp CmpFunc) []pair.Pair {
+	if n == t.nil {
+		return res
+	}
+
+	iCmp := cmp(n.key, key) // cmp() may takes some time, so we just cmp one time.
+	if iCmp > 0 && len(res) < num {
+		res = t.rangeAscN(n.left, res, num, key, cmp)
+	}
+	if iCmp >= 0 && len(res) < num {
+		res = append(res, pair.Pair{First: n.key, Second: n.value})
+	}
+	if len(res) < num {
+		res = t.rangeAscN(n.right, res, num, key, cmp)
+	}
+	return res
+}
+
+func (t *rbTree) rangeDesc(n *node, res []pair.Pair, minKey, maxKey interface{}, cmp CmpFunc) []pair.Pair {
+	if n == t.nil {
+		return res
+	}
+
+	cmpMin, cmpMax := cmp(n.key, minKey), cmp(n.key, maxKey) // cmp() may takes some time, so we just cmp one time.
+	if cmpMax < 0 {
+		res = t.rangeDesc(n.right, res, minKey, maxKey, cmp)
+	}
+	if cmpMin >= 0 && cmpMax <= 0 {
+		res = append(res, pair.Pair{First: n.key, Second: n.value})
+	}
+	if cmpMin > 0 {
+		res = t.rangeDesc(n.left, res, minKey, maxKey, cmp)
+	}
+	return res
+}
+
+func (t *rbTree) rangeDescN(n *node, res []pair.Pair, num int, key interface{}, cmp CmpFunc) []pair.Pair {
+	if n == t.nil {
+		return res
+	}
+
+	iCmp := cmp(n.key, key) // cmp() may takes some time, so we just cmp one time.
+	if iCmp < 0 && len(res) < num {
+		res = t.rangeDescN(n.right, res, num, key, cmp)
+	}
+	if iCmp <= 0 && len(res) < num {
+		res = append(res, pair.Pair{First: n.key, Second: n.value})
+	}
+	if len(res) < num {
+		res = t.rangeDescN(n.left, res, num, key, cmp)
+	}
+	return res
+}
+
+type Check struct {
+	MaxH   int     `json:"maxH"`
+	MinH   int     `json:"minH"`
+	BlackH int     `json:"blackH"`
+	Len    int     `json:"len"`
+	Colour colours `json:"colour"`
+}
+
+// check checks if n is a rbTree
+// if ok == true, the tree is a rbTree.
+func (t *rbTree) check(n *node) (c *Check, ok bool) {
+	if n == t.nil {
+		return &Check{Colour: black}, true
+	}
+	c = &Check{MaxH: 1, MinH: 1, Len: 1, Colour: n.color}
+	if n.color == black {
+		c.BlackH = 1
+	}
+	if n.left == t.nil && n.right == t.nil {
+		return c, true
+	} else if n.left != t.nil && n.right != t.nil {
+		var cl, cr *Check
+		ok := false
+		if cl, ok = t.check(n.left); !ok {
+			return c, false
+		}
+		if cr, ok = t.check(n.right); !ok {
+			return c, false
+		}
+
+		if (c.Colour == red && (cl.Colour == red || cr.Colour == red)) || cl.BlackH != cr.BlackH {
+			return c, false
+		}
+
+		if cl.MaxH > cr.MaxH {
+			c.MaxH += cl.MaxH
+		} else {
+			c.MaxH += cr.MaxH
+		}
+
+		if cl.MinH < cr.MinH {
+			c.MinH += cl.MinH
+		} else {
+			c.MinH += cr.MinH
+		}
+
+		c.BlackH += cl.BlackH
+		c.Len += cl.Len + cr.Len
+	} else if n.right == t.nil {
+		cl, ok := t.check(n.left)
+		if !ok || cl.Colour != red || cl.Len != 1 {
+			return c, false
+		}
+
+		c.Len += cl.Len
+		c.BlackH += cl.BlackH
+		c.MinH += cl.MinH
+		c.MaxH += cl.MaxH
+	} else {
+		cr, ok := t.check(n.right)
+		if !ok || cr.Colour != red || cr.Len != 1 {
+			return c, false
+		}
+
+		c.Len += cr.Len
+		c.BlackH += cr.BlackH
+		c.MinH += cr.MinH
+		c.MaxH += cr.MaxH
+	}
+
+	return c, true
+}
+
+// O(N)
+func (t *rbTree) getDepth(n *node) uint {
+	if n == t.nil {
+		return 0
+	}
+	ld := t.getDepth(n.left)
+	rd := t.getDepth(n.right)
+
+	if ld > rd {
+		return ld + 1
+	} else {
+		return rd + 1
+	}
+}
+
+// O(logN)
+func (t *rbTree) getLeftDepth(n *node) uint {
+	if n == t.nil {
+		return 0
+	}
+	return t.getLeftDepth(n.left) + 1
+}
+
+// Deprecated: only for debugging, unstable function
+func (t *rbTree) makeString(n *node, buffs []*strings.Builder, step, lMove, tDepth, nDepth uint, ifRowFirst, ifParentRowFirst bool) {
+	if n == t.nil {
+		return
+	}
+	space := (step << (tDepth - nDepth)) - step
+	if ifRowFirst {
+		if space >= lMove {
+			space -= lMove
+		}
+	} else {
+		space = (space << 1) + step
+		if ifParentRowFirst && n.parent.left == t.nil {
+			space = step * (((space / step) >> 1) + 1)
+		}
+	}
+	for i := space; i > 0; i-- {
+		buffs[nDepth-1].WriteString(" ")
+	}
+	// write key "[123456]B"
+	buffs[nDepth-1].WriteString("[")
+	strKey := fmt.Sprint(n.key)
+	for i := int(step) - 3 - len(strKey); i > 0; i-- {
+		buffs[nDepth-1].WriteString(" ")
+	}
+	buffs[nDepth-1].WriteString(strKey)
+	if n.color == red {
+		buffs[nDepth-1].WriteString("]R")
+	} else {
+		buffs[nDepth-1].WriteString("]B")
+	}
+
+	if n.left != t.nil {
+		t.makeString(n.left, buffs, step, lMove, tDepth, nDepth+1, ifRowFirst, false)
+	} else if !ifRowFirst {
+		for i := nDepth + 1; i <= tDepth; i++ {
+			rStep := spaceCount(step, tDepth, i)
+			rSpace := rStep << (i - nDepth - 1)
+			for j := rSpace; j > 0; j-- {
+				buffs[i-1].WriteString(" ")
+			}
+		}
+	}
+
+	if n.right != t.nil {
+		if n.left == t.nil {
+			t.makeString(n.right, buffs, step, lMove, tDepth, nDepth+1, false, true)
+		} else {
+			t.makeString(n.right, buffs, step, lMove, tDepth, nDepth+1, false, false)
+		}
+	} else {
+		if ifRowFirst && n.left == t.nil {
+			rSpace := step << (tDepth - nDepth)
+			for i := tDepth; i > nDepth; i-- {
+				if i != tDepth {
+					rSpace -= step << (tDepth - i - 1)
+				}
+				for j := rSpace; j > 0; j-- {
+					buffs[i-1].WriteString(" ")
+				}
+			}
+		} else {
+			for i := nDepth + 1; i <= tDepth; i++ {
+				rStep := spaceCount(step, tDepth, i)
+				rSpace := rStep << (i - nDepth - 1)
+				for j := rSpace; j > 0; j-- {
+					buffs[i-1].WriteString(" ")
+				}
+			}
+		}
+	}
+}
+
+func spaceCount(step, tDepth, nDepth uint) uint {
+	return step << (tDepth - nDepth + 1)
 }
